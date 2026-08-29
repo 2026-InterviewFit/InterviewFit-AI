@@ -6,12 +6,19 @@ uvicorn[standard]
 
 # Data validation
 pydantic
+pydantic-settings>=2.0
 
 # PyTorch
 torch
+# torch==2.8.0+cu128
+# torchvision==0.23.0+cu128
+# torchaudio==2.8.0+cu128
 
 # Hugging Face
 transformers
 peft
 accelerate
 bitsandbytes
+
+# Google
+google-genai
