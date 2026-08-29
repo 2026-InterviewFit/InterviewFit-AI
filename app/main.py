@@ -1,6 +1,4 @@
-from urllib.request import Request
-
-from fastapi import FastAPI
+from fastapi import Request
 
 from app.lifespan import lifespan
 from app.schemas import AnalyzeTask, AnalyzeResult
