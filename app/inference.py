@@ -6,7 +6,6 @@ import torch
 
 from pydantic import ValidationError
 
-from app.fallback import run_llm_fallback
 from app.model import model, tokenizer
 from app.schemas import AnalyzeTask, AnalyzeResult
 from app.utils import clean_json
@@ -31,32 +30,32 @@ async def process_gpu_inference(
     tokenizer
 ) -> AnalyzeResult:
     async with gpu_lock:
-        try:
-            prompt_text = build_prompt(task, tokenizer)
+        prompt_text = build_prompt(task, tokenizer)
 
-            inputs, outputs = await run_generation(
-                prompt_text,
-                model,
-                tokenizer,
-            )
+        for attempt in range(2):
+            try:
+                inputs, outputs = await run_generation(
+                    prompt_text,
+                    model,
+                    tokenizer,
+                )
 
-            return parse_response(
-                outputs,
-                inputs,
-                tokenizer,
-            )
-        except json.JSONDecodeError:
-            logger.exception("SLM JSON 파싱 실패")
-            return await run_llm_fallback(task)
-        except ValidationError:
-            logger.exception("SLM 응답 형식 검증 실패")
-            return await run_llm_fallback(task)
-        except RuntimeError:
-            logger.exception("SLM 추론 중 런타임 오류")
-            raise
-        except Exception:
-            logger.exception("분석 중 예상하지 못한 오류")
-            raise
+                return parse_response(
+                    outputs,
+                    inputs,
+                    tokenizer,
+                )
+            except json.JSONDecodeError:
+                logger.exception("SLM JSON 파싱 실패 (%d/2)",attempt + 1)
+            except ValidationError:
+                logger.exception("SLM 응답 형식 검증 실패 (%d/2)", attempt + 1)
+            except RuntimeError:
+                logger.exception("SLM 추론 중 런타임 오류")
+                raise
+            except Exception:
+                logger.exception("분석 중 예상하지 못한 오류")
+                raise
+        raise ValueError("SLM 분석 최종 실패")
 
 
 def build_prompt(task: AnalyzeTask, tokenizer) -> str:
