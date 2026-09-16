@@ -1,0 +1,50 @@
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: interview-fastapi
+    ports:
+      - "8010:8010"
+    environment:
+      VLLM_BASE_URL: ${VLLM_BASE_URL}
+      VLLM_MODEL_ID: ${VLLM_MODEL_ID}
+    depends_on:
+      - vllm
+  vllm:
+    build:
+      context: .
+      dockerfile: Dockerfile.vllm
+#    image: vllm/vllm-openai:v0.27.0
+    container_name: interview-vllm
+    ports:
+      - "8020:8020"
+    environment:
+      VLLM_WSL2_ENABLE_PIN_MEMORY: "1"
+#      VLLM_WEIGHT_OFFLOADING_DISABLE_UVA: "1"
+    command:
+      - "--model"
+      - "${VLLM_MODEL_ID}"
+      - "--served-model-name"
+      - "${VLLM_MODEL_ID}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8020"
+      - "--gpu-memory-utilization"
+      - "0.98"
+      - "--max-model-len"
+      - "1024"
+      - "--cpu-offload-gb"
+      - "1"
+      - "--enforce-eager"
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
